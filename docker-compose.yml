@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  dinovoyager-checker:
+    image: dinovoyager-checker:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dinovoyager-checker
+    restart: unless-stopped
+    environment:
+      - SUBSCRIPTION_URL=https://app.dinovoyager.net/api/sub/YOUR_SUBSCRIPTION_TOKEN
+      - POLLING_INTERVAL=60
+      - API_URL=https://app.dinovoyager.net
+      - API_KEY=dvc_live_YOUR_GENERATED_API_KEY
+      - CHECKER_NAME=Home-Server
+      - LOG_LEVEL=INFO
+      - PROXY_TIMEOUT=10
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
