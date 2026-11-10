@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import socket
+import ssl
 import time
 from typing import Any, Dict, List, Optional, Tuple
 import urllib.error
@@ -54,22 +55,9 @@ class TestSummary:
 
 
 # ── Dynamic location maps fetched from DinoVoyager API ──────────────────────
-# These are populated/updated at runtime via fetch_location_maps() on every cycle.
-# Initial seed entries allow offline unit tests to pass without a running API server.
-_dynamic_ip_map: Dict[str, str] = {
-    "64.188.82.195": "EE",
-    "2.27.40.72": "NL",
-    "191.217.252.52": "FI",
-    "138.124.126.158": "DE",
-}
-_dynamic_host_map: Dict[str, str] = {
-    "ee.dinovoyager.net": "EE",
-    "ne.dinovoyager.net": "NL",
-    "nl.dinovoyager.net": "NL",
-    "fl.dinovoyager.net": "FI",
-    "fi.dinovoyager.net": "FI",
-    "de.dinovoyager.net": "DE",
-}
+# These are populated/updated dynamically at runtime via fetch_location_maps() on every cycle.
+_dynamic_ip_map: Dict[str, str] = {}
+_dynamic_host_map: Dict[str, str] = {}
 
 # Exported for backward compatibility with external imports / test suites
 KNOWN_IP_MAP: Dict[str, str] = _dynamic_ip_map
@@ -115,8 +103,12 @@ def fetch_location_maps(
         },
     )
 
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
             body = resp.read().decode("utf-8")
             data = json.loads(body)
     except urllib.error.HTTPError as err:
@@ -325,6 +317,7 @@ def poll_proxies(
     host: str = "127.0.0.1",
     port: int = 2112,
     timeout: float = 10.0,
+    excluded_routes: Optional[Sequence[str]] = None,
 ) -> Tuple[List[RouteResult], TestSummary]:
     """Poll local xray-checker daemon REST API and parse results."""
     url = f"http://{host}:{port}/api/v1/proxies"
@@ -357,16 +350,29 @@ def poll_proxies(
         items = data
 
     routes: List[RouteResult] = []
+    excluded_set = {str(e).strip().lower() for e in (excluded_routes or []) if str(e).strip()}
+
     for item in items:
         if not isinstance(item, dict):
             continue
 
         name = item.get("name", "Unnamed")
         server = item.get("server", "unknown")
+
         try:
             port_val = int(item.get("port", 443))
         except (ValueError, TypeError):
             port_val = 443
+
+        # Skip virtual balancer routes or routes with port 1234
+        if port_val == 1234 or ":1234" in str(server) or ":1234" in str(name):
+            continue
+
+        # Skip or ignore route if its name or server is excluded
+        name_lower = str(name).strip().lower()
+        server_lower = str(server).strip().lower()
+        if any(ex in name_lower or ex in server_lower for ex in excluded_set):
+            continue
         protocol = str(item.get("protocol", "unknown"))
         online = bool(item.get("online", False))
 
@@ -435,6 +441,10 @@ class ProxyTester:
         self.timeout = timeout_sec
         self.api_url = api_url
         self.api_key = api_key
+        self.excluded_routes: List[str] = []
+
+    def set_excluded_routes(self, routes: List[str]) -> None:
+        self.excluded_routes = list(routes) if routes else []
 
     def fetch_and_compute_metrics(self) -> Dict[str, Any]:
         # Dynamically refresh location maps from DinoVoyager API before evaluating routes
@@ -444,7 +454,12 @@ class ProxyTester:
             except Exception as exc:
                 logger.warning("Error refreshing location maps from API: %s", exc)
 
-        routes, summary = poll_proxies(host=self.host, port=self.port, timeout=self.timeout)
+        routes, summary = poll_proxies(
+            host=self.host,
+            port=self.port,
+            timeout=self.timeout,
+            excluded_routes=self.excluded_routes,
+        )
         return {
             "routes": [r.to_dict() for r in routes],
             "summary": summary.to_dict(),

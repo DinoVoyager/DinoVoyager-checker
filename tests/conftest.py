@@ -17,6 +17,31 @@ def reset_geo_cache():
     clear_cache()
 
 
+@pytest.fixture(autouse=True)
+def setup_test_location_maps():
+    """Pre-populate location mapping for unit tests without external network."""
+    from checker.tester import _dynamic_ip_map, _dynamic_host_map
+    _dynamic_ip_map.clear()
+    _dynamic_host_map.clear()
+    _dynamic_ip_map.update({
+        "64.188.82.195": "EE",
+        "2.27.40.72": "NL",
+        "191.217.252.52": "FI",
+        "138.124.126.158": "DE",
+    })
+    _dynamic_host_map.update({
+        "ee.dinovoyager.net": "EE",
+        "ne.dinovoyager.net": "NL",
+        "nl.dinovoyager.net": "NL",
+        "fl.dinovoyager.net": "FI",
+        "fi.dinovoyager.net": "FI",
+        "de.dinovoyager.net": "DE",
+    })
+    yield
+    _dynamic_ip_map.clear()
+    _dynamic_host_map.clear()
+
+
 @pytest.fixture
 def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure no checker-related environment variables are set."""

@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   dinovoyager-checker:
-    image: dinovoyager-checker:latest
+    image: dinovoyager/checker:latest
     build:
       context: .
       dockerfile: Dockerfile

@@ -119,6 +119,8 @@ def main(argv: Optional[list[str]] = None) -> int:
 
             # 3. Query route metrics
             logger.info("Evaluating proxy routes connectivity...")
+            if hasattr(config, "last_excluded_routes") and config.last_excluded_routes:
+                tester.set_excluded_routes(config.last_excluded_routes)
             routes_data = tester.fetch_and_compute_metrics()
             summary = routes_data.get("summary", {})
             logger.info(

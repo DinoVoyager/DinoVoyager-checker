@@ -34,7 +34,7 @@ docker run -d \
   -e API_URL="https://app.dinovoyager.net" \
   -e API_KEY="dvc_live_a1b2c3d4e5f67890..." \
   -e CHECKER_NAME="Home-London-Server" \
-  dinovoyager-checker:latest
+  dinovoyager/checker:latest
 ```
 
 #### 2. Quick Start with Docker Run (CLI Flags)
@@ -43,7 +43,7 @@ docker run -d \
 docker run -d \
   --name dinovoyager-checker \
   --restart unless-stopped \
-  dinovoyager-checker:latest \
+  dinovoyager/checker:latest \
   --subscription-url "https://app.dinovoyager.net/api/sub/my-sub-token" \
   --interval 60 \
   --api-url "https://app.dinovoyager.net" \
@@ -60,7 +60,7 @@ version: "3.8"
 
 services:
   dinovoyager-checker:
-    image: dinovoyager-checker:latest
+    image: dinovoyager/checker:latest
     container_name: dinovoyager-checker
     restart: unless-stopped
     environment:
@@ -146,7 +146,7 @@ docker run -d \
   -e API_URL="https://app.dinovoyager.net" \
   -e API_KEY="dvc_live_a1b2c3d4e5f67890..." \
   -e CHECKER_NAME="Home-Moscow-Server" \
-  dinovoyager-checker:latest
+  dinovoyager/checker:latest
 ```
 
 #### 2. Запуск через Docker Compose
@@ -158,7 +158,7 @@ version: "3.8"
 
 services:
   dinovoyager-checker:
-    image: dinovoyager-checker:latest
+    image: dinovoyager/checker:latest
     container_name: dinovoyager-checker
     restart: unless-stopped
     environment:

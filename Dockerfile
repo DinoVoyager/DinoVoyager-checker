@@ -1,5 +1,13 @@
 FROM alpine:3.21
 
+LABEL org.opencontainers.image.title="DinoVoyager Checker" \
+      org.opencontainers.image.description="Lightweight distributed connectivity monitoring probe for DinoVoyager" \
+      org.opencontainers.image.version="1.0.0" \
+      org.opencontainers.image.authors="DinoVoyager Team" \
+      org.opencontainers.image.source="https://github.com/DinoVoyager/DinoVoyager-checker" \
+      org.opencontainers.image.licenses="MIT" \
+      maintainer="DinoVoyager Team"
+
 # Install minimal runtime dependencies (zero pip / zero build tools needed)
 RUN apk add --no-cache python3 ca-certificates curl tzdata && \
     adduser -D -u 1000 -h /app appuser && \
