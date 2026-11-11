@@ -47,7 +47,7 @@ The script will automatically:
 1. Verify (or optionally install) Docker.
 2. Create an isolated installation folder (`/opt/dinovoyager-checker` or `~/dinovoyager-checker`).
 3. Securely store your credentials in `.env` (`chmod 600`).
-4. Pull `dinovoyager/checker:latest` and launch the container with auto-restart (`--restart unless-stopped`).
+4. Pull `as1aw/checker:latest` and launch the container with auto-restart (`--restart unless-stopped`).
 5. Generate a local `update.sh` for 1-click future updates.
 
 ---
@@ -63,7 +63,7 @@ docker run -d \
   -e API_URL="https://app.dinovoyager.net" \
   -e API_KEY="dvc_live_a1b2c3d4e5f67890..." \
   -e CHECKER_NAME="Home-London-Server" \
-  dinovoyager/checker:latest
+  as1aw/checker:latest
 ```
 
 #### 3. Manual Start with Docker Compose
@@ -75,7 +75,7 @@ version: "3.8"
 
 services:
   dinovoyager-checker:
-    image: dinovoyager/checker:latest
+    image: as1aw/checker:latest
     container_name: dinovoyager-checker
     restart: unless-stopped
     environment:
@@ -198,7 +198,7 @@ curl -fsSL https://raw.githubusercontent.com/DinoVoyager/DinoVoyager-checker/mai
 1. Проверяет наличие Docker (при необходимости предлагает установить его в один клик).
 2. Создает изолированную директорию (`/opt/dinovoyager-checker` или `~/dinovoyager-checker`).
 3. Надежно сохраняет конфигурацию в `.env` с правами доступа `600`.
-4. Скачивает свежий образ `dinovoyager/checker:latest` и запускает контейнер с автоперезапуском (`--restart unless-stopped`).
+4. Скачивает свежий образ `as1aw/checker:latest` и запускает контейнер с автоперезапуском (`--restart unless-stopped`).
 5. Создает локальный скрипт `update.sh` для быстрого обновления одной командой в будущем.
 
 ---
@@ -214,7 +214,7 @@ docker run -d \
   -e API_URL="https://app.dinovoyager.net" \
   -e API_KEY="dvc_live_a1b2c3d4e5f67890..." \
   -e CHECKER_NAME="Home-Moscow-Server" \
-  dinovoyager/checker:latest
+  as1aw/checker:latest
 ```
 
 #### 3. Ручной запуск через Docker Compose
@@ -226,7 +226,7 @@ version: "3.8"
 
 services:
   dinovoyager-checker:
-    image: dinovoyager/checker:latest
+    image: as1aw/checker:latest
     container_name: dinovoyager-checker
     restart: unless-stopped
     environment:

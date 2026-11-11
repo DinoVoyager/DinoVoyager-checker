@@ -104,22 +104,22 @@ if command -v docker >/dev/null 2>&1; then
         RESTART_POLICY="$(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER_NAME" 2>/dev/null || echo "unless-stopped")"
         [ -z "$RESTART_POLICY" ] && RESTART_POLICY="unless-stopped"
 
-        echo -e "${YELLOW}>> Building updated image 'dinovoyager/checker:latest'...${NC}"
-        docker build -t dinovoyager/checker:latest .
+        echo -e "${YELLOW}>> Building updated image 'as1aw/checker:latest'...${NC}"
+        docker build -t as1aw/checker:latest .
 
         echo -e "${YELLOW}>> Re-creating container '${CONTAINER_NAME}'...${NC}"
         docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
         docker rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
 
         # Run new container
-        eval "docker run -d --name \"$CONTAINER_NAME\" --restart \"$RESTART_POLICY\" $ENV_ARGS dinovoyager/checker:latest"
+        eval "docker run -d --name \"$CONTAINER_NAME\" --restart \"$RESTART_POLICY\" $ENV_ARGS as1aw/checker:latest"
         echo -e "${GREEN}>> Container '${CONTAINER_NAME}' successfully updated and started.${NC}"
     else
-        echo -e "${YELLOW}>> Building Docker image 'dinovoyager/checker:latest'...${NC}"
-        docker build -t dinovoyager/checker:latest .
+        echo -e "${YELLOW}>> Building Docker image 'as1aw/checker:latest'...${NC}"
+        docker build -t as1aw/checker:latest .
         echo -e "${GREEN}>> Image built successfully.${NC}"
         echo -e "${CYAN}>> You can start the container using:${NC}"
-        echo -e "   docker run -d --name $CONTAINER_NAME --restart unless-stopped -e SUBSCRIPTION_URL=\"...\" -e API_URL=\"...\" -e API_KEY=\"...\" dinovoyager/checker:latest"
+        echo -e "   docker run -d --name $CONTAINER_NAME --restart unless-stopped -e SUBSCRIPTION_URL=\"...\" -e API_URL=\"...\" -e API_KEY=\"...\" as1aw/checker:latest"
     fi
 
     # 4. Quick Health Check

@@ -41,7 +41,7 @@ API_URL="${API_URL:-https://app.dinovoyager.net}"
 CHECKER_NAME="${CHECKER_NAME:-}"
 POLLING_INTERVAL="${POLLING_INTERVAL:-300}"
 REGION_CODE="${REGION_CODE:-${REGION:-RU-MOW}}"
-IMAGE_NAME="${IMAGE_NAME:-dinovoyager/checker:latest}"
+IMAGE_NAME="${IMAGE_NAME:-as1aw/checker:latest}"
 AUTO_CONFIRM=false
 
 # Default directory
@@ -73,7 +73,7 @@ Options:
   -r, --region <REGION>           Russian region code (default: RU-MOW)
   -i, --interval <SECONDS>        Polling cadence in seconds (default: 300, min: 15)
   -d, --dir <DIR>                 Target install directory (default: /opt/dinovoyager-checker)
-      --image <IMAGE>             Docker image (default: dinovoyager/checker:latest)
+      --image <IMAGE>             Docker image (default: as1aw/checker:latest)
   -y, --yes                       Assume 'yes' to prompts (non-interactive)
   -h, --help                      Show this help message
 
@@ -401,10 +401,10 @@ if [ -n "$COMPOSE" ] && [ -f "docker-compose.yml" ]; then
     $COMPOSE up -d --remove-orphans
 else
     echo ">> Pulling latest image..."
-    docker pull dinovoyager/checker:latest
+    docker pull ${IMAGE_NAME}
     echo ">> Re-running container..."
     docker rm -f dinovoyager-checker 2>/dev/null || true
-    docker run -d --name dinovoyager-checker --restart unless-stopped --env-file .env dinovoyager/checker:latest
+    docker run -d --name dinovoyager-checker --restart unless-stopped --env-file .env ${IMAGE_NAME}
 fi
 
 echo ">> Update complete! Recent logs:"

@@ -69,19 +69,19 @@ if ($dockerCmd) {
                 }
             }
 
-            Write-Host ">> Building updated image 'dinovoyager/checker:latest'..." -ForegroundColor Yellow
-            docker build -t dinovoyager/checker:latest .
+            Write-Host ">> Building updated image 'as1aw/checker:latest'..." -ForegroundColor Yellow
+            docker build -t as1aw/checker:latest .
 
             Write-Host ">> Re-creating container '$containerName'..." -ForegroundColor Yellow
             docker stop $containerName 2>$null
             docker rm $containerName 2>$null
 
-            $runArgs = @("run", "-d", "--name", $containerName, "--restart", "unless-stopped") + $envArgs + @("dinovoyager/checker:latest")
+            $runArgs = @("run", "-d", "--name", $containerName, "--restart", "unless-stopped") + $envArgs + @("as1aw/checker:latest")
             & docker $runArgs
             Write-Host ">> Container '$containerName' successfully updated and started." -ForegroundColor Green
         } else {
-            Write-Host ">> Building Docker image 'dinovoyager/checker:latest'..." -ForegroundColor Yellow
-            docker build -t dinovoyager/checker:latest .
+            Write-Host ">> Building Docker image 'as1aw/checker:latest'..." -ForegroundColor Yellow
+            docker build -t as1aw/checker:latest .
             Write-Host ">> Image built successfully." -ForegroundColor Green
         }
     }
