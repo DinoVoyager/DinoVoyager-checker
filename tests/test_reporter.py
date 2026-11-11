@@ -8,7 +8,7 @@ import urllib.request
 
 import pytest
 
-from checker.config import Config
+from checker.config import Config, CHECKER_VERSION
 from checker.geo import GeoInfo
 from checker.reporter import assemble_payload, send_report
 from checker.tester import RouteResult, TestSummary
@@ -79,7 +79,7 @@ def test_reporter_assemble_payload_schema_conformance(
     payload = assemble_payload(sample_config, sample_geo, sample_routes, sample_summary)
 
     assert payload["api_key"] == sample_config.api_key
-    assert payload["checker_version"] == "1.0.0"
+    assert payload["checker_version"] == CHECKER_VERSION
     assert isinstance(payload["timestamp"], int)
     assert isinstance(payload["collected_at"], str)
     assert payload["collected_at"].endswith("Z")

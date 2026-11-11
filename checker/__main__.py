@@ -54,7 +54,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Initialize subsystems
-    geo_detector = GeoDetector()
+    from checker.geo import GeoInfo
     supervisor = XraySupervisor(
         subscription_url=config.subscription_url,
         polling_interval=config.polling_interval,
@@ -76,16 +76,20 @@ def main(argv: Optional[list[str]] = None) -> int:
     except Exception as exc:
         logger.warning("Could not pre-fetch location maps from central API: %s", exc)
 
-    # Initial Geo resolution
-    logger.info("Resolving origin network geolocation and residential ISP...")
-    initial_geo = geo_detector.get_geo_info(checker_name=config.checker_name)
-    logger.info(
-        "Origin: %s, %s (ISP: %s, ASN: %s, IP: %s)",
-        initial_geo.get("city"),
-        initial_geo.get("country_code"),
-        initial_geo.get("isp"),
-        initial_geo.get("asn"),
-        initial_geo.get("ip"),
+    # Regional binding (transmits region code directly, no third-party geo queries or coordinates)
+    logger.info("Regional binding: %s", config.region)
+    geo_info = GeoInfo(
+        region=config.region,
+        region_code=config.region,
+        city=config.region,
+        country="Russia",
+        country_code="RU",
+        isp="Домашний провайдер",
+        org="Домашний провайдер",
+        asn="Unknown",
+        ip="0.0.0.0",
+        latitude=0.0,
+        longitude=0.0,
     )
 
     # Launch supervisor
@@ -110,14 +114,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             except Exception as exc:
                 logger.error("Error during supervisor healthcheck: %s", exc)
 
-            # 2. Update Geo & ISP (uses 4-hour in-memory cache)
-            try:
-                geo_info = geo_detector.get_geo_info(checker_name=config.checker_name)
-            except Exception as exc:
-                logger.warning("Error resolving geo info: %s", exc)
-                geo_info = initial_geo
-
-            # 3. Query route metrics
+            # 2. Query route metrics
             logger.info("Evaluating proxy routes connectivity...")
             if hasattr(config, "last_excluded_routes") and config.last_excluded_routes:
                 tester.set_excluded_routes(config.last_excluded_routes)

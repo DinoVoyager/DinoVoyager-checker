@@ -10,10 +10,11 @@ services:
     restart: unless-stopped
     environment:
       - SUBSCRIPTION_URL=https://app.dinovoyager.net/api/sub/YOUR_SUBSCRIPTION_TOKEN
-      - POLLING_INTERVAL=60
+      - POLLING_INTERVAL=300
       - API_URL=https://app.dinovoyager.net
       - API_KEY=dvc_live_YOUR_GENERATED_API_KEY
       - CHECKER_NAME=Home-Server
+      - REGION_CODE=RU-MOW
       - LOG_LEVEL=INFO
       - PROXY_TIMEOUT=10
     logging:

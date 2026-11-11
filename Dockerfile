@@ -2,7 +2,7 @@ FROM alpine:3.21
 
 LABEL org.opencontainers.image.title="DinoVoyager Checker" \
       org.opencontainers.image.description="Lightweight distributed connectivity monitoring probe for DinoVoyager" \
-      org.opencontainers.image.version="1.0.0" \
+      org.opencontainers.image.version="1.0.1" \
       org.opencontainers.image.authors="DinoVoyager Team" \
       org.opencontainers.image.source="https://github.com/DinoVoyager/DinoVoyager-checker" \
       org.opencontainers.image.licenses="MIT" \

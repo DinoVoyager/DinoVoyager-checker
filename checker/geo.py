@@ -12,6 +12,8 @@ from typing import Any, Dict, Optional
 import urllib.error
 import urllib.request
 
+from checker.config import CHECKER_VERSION
+
 logger = logging.getLogger("dinovoyager-checker.geo")
 
 GEO_CACHE_TTL = 4 * 3600  # 4 hours in seconds
@@ -83,7 +85,7 @@ def _query_ip_api(ip: Optional[str] = None, timeout: float = 5.0) -> Optional[Ge
         url += f"{ip}"
     url += "?fields=status,message,country,countryCode,region,regionName,city,lat,lon,timezone,isp,org,as,query"
 
-    req = urllib.request.Request(url, headers={"User-Agent": "DinoVoyager-Checker/1.0.0", "Accept": "application/json"})
+    req = urllib.request.Request(url, headers={"User-Agent": f"DinoVoyager-Checker/{CHECKER_VERSION}", "Accept": "application/json"})
 
     resp_obj = urllib.request.urlopen(req, timeout=timeout)
     try:
@@ -117,7 +119,7 @@ def _query_ip_api(ip: Optional[str] = None, timeout: float = 5.0) -> Optional[Ge
 
 def _query_ipinfo(ip: Optional[str] = None, timeout: float = 5.0) -> Optional[GeoInfo]:
     url = f"https://ipinfo.io/{ip + '/' if ip else ''}json"
-    req = urllib.request.Request(url, headers={"User-Agent": "DinoVoyager-Checker/1.0.0", "Accept": "application/json"})
+    req = urllib.request.Request(url, headers={"User-Agent": f"DinoVoyager-Checker/{CHECKER_VERSION}", "Accept": "application/json"})
 
     resp_obj = urllib.request.urlopen(req, timeout=timeout)
     try:
@@ -161,7 +163,7 @@ def _query_ipinfo(ip: Optional[str] = None, timeout: float = 5.0) -> Optional[Ge
 
 def _query_ipwhois(ip: Optional[str] = None, timeout: float = 5.0) -> Optional[GeoInfo]:
     url = f"https://ipwhois.app/json/{ip if ip else ''}"
-    req = urllib.request.Request(url, headers={"User-Agent": "DinoVoyager-Checker/1.0.0", "Accept": "application/json"})
+    req = urllib.request.Request(url, headers={"User-Agent": f"DinoVoyager-Checker/{CHECKER_VERSION}", "Accept": "application/json"})
 
     resp_obj = urllib.request.urlopen(req, timeout=timeout)
     try:

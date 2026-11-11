@@ -38,7 +38,7 @@ class XraySupervisor:
     def __init__(
         self,
         subscription_url: str,
-        polling_interval: int = 60,
+        polling_interval: int = 300,
         host: str = "127.0.0.1",
         port: int = 2112,
         binary_path: Optional[str] = None,

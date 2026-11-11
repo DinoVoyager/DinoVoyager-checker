@@ -27,6 +27,10 @@ class _CustomArgumentParser(argparse.ArgumentParser):
         raise ConfigError(f"Argument parsing error: {message}")
 
 
+CHECKER_VERSION = "1.0.1"
+VERSION = CHECKER_VERSION
+
+
 @dataclass
 class Config:
     """Checker runtime configuration."""
@@ -38,6 +42,8 @@ class Config:
     checker_name: Optional[str] = None
     proxy_timeout: int = 10
     log_level: str = "INFO"
+    region: str = "RU-MOW"
+    version: str = CHECKER_VERSION
 
 
 # Alias for backward/test compatibility
@@ -60,7 +66,7 @@ def _build_parser() -> _CustomArgumentParser:
         "-i", "--interval",
         dest="polling_interval",
         default=None,
-        help="Polling interval in seconds, minimum 15 (default: 60, ENV: POLLING_INTERVAL).",
+        help="Polling interval in seconds, minimum 15 (default: 300, ENV: POLLING_INTERVAL).",
     )
     parser.add_argument(
         "-u", "--api-url",
@@ -79,6 +85,12 @@ def _build_parser() -> _CustomArgumentParser:
         dest="checker_name",
         default=None,
         help="Optional human-readable checker identifier (ENV: CHECKER_NAME).",
+    )
+    parser.add_argument(
+        "-r", "--region",
+        dest="region",
+        default=None,
+        help="Assigned Russian region code, e.g. RU-MOW (default: RU-MOW, ENV: REGION_CODE / REGION).",
     )
     parser.add_argument(
         "--timeout",
@@ -204,6 +216,10 @@ def load_config(
     if log_level not in ("DEBUG", "INFO", "WARNING", "ERROR"):
         errors.append(f"Invalid LOG_LEVEL: must be DEBUG, INFO, WARN/WARNING, or ERROR (got '{log_level}')")
 
+    # Optional: REGION (default: RU-MOW)
+    raw_region = parsed_args.region or raw_env.get("REGION_CODE") or raw_env.get("REGION") or "RU-MOW"
+    region = str(raw_region).strip().upper() or "RU-MOW"
+
     if errors:
         msg = "Configuration Error:\n" + "\n".join(f"  - {err}" for err in errors)
         if exit_on_error:
@@ -220,4 +236,5 @@ def load_config(
         checker_name=checker_name,
         proxy_timeout=proxy_timeout,
         log_level=log_level,
+        region=region,
     )

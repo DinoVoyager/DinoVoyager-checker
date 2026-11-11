@@ -15,7 +15,7 @@ import urllib.request
 
 logger = logging.getLogger("dinovoyager-checker.reporter")
 
-CHECKER_VERSION = "1.0.0"
+from checker.config import CHECKER_VERSION
 
 
 class AuthError(Exception):
@@ -70,8 +70,12 @@ def assemble_payload(
             return geo.get(field, default)
         return getattr(geo, field, default)
 
+    region_val = str(_g("region_code", _g("region", getattr(config, "region", "RU-MOW")))).strip().upper() or "RU-MOW"
+
     checker_info = {
         "name": checker_name,
+        "region": region_val,
+        "region_code": region_val,
         "ip": str(_g("ip", "0.0.0.0")),
         "isp": str(_g("isp", "Unknown")),
         "org": str(_g("org", _g("isp", "Unknown"))),

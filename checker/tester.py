@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import urllib.error
 import urllib.request
 
+from checker.config import CHECKER_VERSION
+
 logger = logging.getLogger("dinovoyager-checker.tester")
 
 
@@ -99,7 +101,7 @@ def fetch_location_maps(
         url,
         headers={
             "X-API-Key": str(api_key),
-            "User-Agent": "DinoVoyager-Checker/1.0.0",
+            "User-Agent": f"DinoVoyager-Checker/{CHECKER_VERSION}",
         },
     )
 
@@ -321,7 +323,7 @@ def poll_proxies(
 ) -> Tuple[List[RouteResult], TestSummary]:
     """Poll local xray-checker daemon REST API and parse results."""
     url = f"http://{host}:{port}/api/v1/proxies"
-    req = urllib.request.Request(url, headers={"User-Agent": "DinoVoyager-Checker/1.0.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": f"DinoVoyager-Checker/{CHECKER_VERSION}"})
 
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
