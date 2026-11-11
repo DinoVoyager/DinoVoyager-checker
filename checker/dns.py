@@ -333,3 +333,4 @@ def check_dns_health(timeout: float = 3.5) -> Dict[str, Any]:
         "observations": observations,
         "timestamp": int(time.time()),
     }
+

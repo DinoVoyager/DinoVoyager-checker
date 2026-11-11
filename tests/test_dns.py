@@ -60,3 +60,4 @@ def test_check_dns_health_mocked():
         for obs in result["observations"]:
             assert obs["status"] == "ok"
             assert obs["outcome"]["type"] == "Answer"
+

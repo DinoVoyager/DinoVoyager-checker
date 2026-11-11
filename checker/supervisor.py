@@ -82,6 +82,21 @@ class _SubscriptionFilterHandler(http.server.BaseHTTPRequestHandler):
                     or "%28%D0%90%D0%B2%D1%82%D0%BE-%D0%B2%D1%8B%D0%B1%D0%BE%D1%80" in line
                 ):
                     continue
+
+                # Clean hysteria2 configs: strip Remnawave-specific client JSON 'fm=' (which conflicts with Xray finalmask)
+                # and ensure alpn=h3 is specified for proper QUIC negotiation
+                if line.startswith("hysteria2://") or line.startswith("hy2://"):
+                    import re
+                    line = re.sub(r'([?&])fm=[^&#]+(&)?', lambda m: m.group(1) if m.group(1) == '?' and not m.group(2) else ('&' if m.group(2) else ''), line)
+                    line = line.replace('?&', '?').rstrip('?&')
+                    if "alpn=" not in line:
+                        sep = '&' if '?' in line else '?'
+                        if '#' in line:
+                            base_part, frag = line.split('#', 1)
+                            line = f"{base_part}{sep}alpn=h3#{frag}"
+                        else:
+                            line = f"{line}{sep}alpn=h3"
+
                 clean_lines.append(line)
 
             if clean_lines:
