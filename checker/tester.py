@@ -96,7 +96,8 @@ def fetch_location_maps(
     if not force and _location_maps_fetched_at > 0 and (now - _location_maps_fetched_at) < _LOCATION_MAPS_TTL:
         return  # Within throttle window
 
-    url = f"{api_url.rstrip('/')}/api/info/locations"
+    base = api_url.rstrip("/")
+    url = f"{base}/info/locations" if base.endswith("/api") else f"{base}/api/info/locations"
     req = urllib.request.Request(
         url,
         headers={

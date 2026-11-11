@@ -185,8 +185,13 @@ def send_report(
         "User-Agent": f"DinoVoyager-Checker/{CHECKER_VERSION}",
     }
 
-    primary_url = f"{api_url}/api/checkers/report"
-    fallback_url = f"{api_url}/checkers/report"
+    base = api_url.rstrip("/")
+    if base.endswith("/api"):
+        primary_url = f"{base}/checkers/report"
+        fallback_url = f"{base[:-4]}/checkers/report" if len(base) > 4 else f"{base}/checkers/report"
+    else:
+        primary_url = f"{base}/api/checkers/report"
+        fallback_url = f"{base}/checkers/report"
     current_url = primary_url
 
     ssl_ctx = ssl.create_default_context()
