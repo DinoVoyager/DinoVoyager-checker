@@ -218,7 +218,7 @@ class XraySupervisor:
             "SUBSCRIPTION_UPDATE_INTERVAL": str(self.polling_interval),
             "PROXY_CHECK_INTERVAL": str(self.polling_interval),
             "PROXY_CHECK_METHOD": "status",
-            "PROXY_STATUS_CHECK_URL": "http://www.gstatic.com/generate_204",
+            "PROXY_STATUS_CHECK_URL": os.getenv("PROXY_STATUS_CHECK_URL", "http://cp.cloudflare.com/generate_204"),
             "PROXY_IP_CHECK_URL": "https://icanhazip.com",
             "PROXY_TIMEOUT": str(self.proxy_timeout),
             "METRICS_HOST": self.host,

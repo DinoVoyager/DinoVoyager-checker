@@ -35,6 +35,7 @@ def assemble_payload(
     geo: Any,
     routes: List[Any],
     summary: Any,
+    dns_data: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Construct JSON report payload matching PROJECT.md § Interface Contracts: 1."""
     now_ts = int(time.time())
@@ -139,7 +140,7 @@ def assemble_payload(
         "reliability_pct": reliability_pct,
     }
 
-    return {
+    payload: Dict[str, Any] = {
         "api_key": api_key,
         "checker_version": CHECKER_VERSION,
         "timestamp": now_ts,
@@ -148,6 +149,10 @@ def assemble_payload(
         "routes": formatted_routes,
         "summary": formatted_summary,
     }
+    if dns_data:
+        payload["dns"] = dns_data
+
+    return payload
 
 
 # Alias for backward compatibility
@@ -300,10 +305,10 @@ class ReportManager:
         self.max_retries = max_retries
         self.base_backoff = base_backoff
 
-    def build_payload(self, geo_data: Any, routes_data: Any) -> Dict[str, Any]:
+    def build_payload(self, geo_data: Any, routes_data: Any, dns_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         routes = routes_data.get("routes", []) if isinstance(routes_data, dict) else routes_data
         summary = routes_data.get("summary", {}) if isinstance(routes_data, dict) else {}
-        return assemble_payload(self.config, geo_data, routes, summary)
+        return assemble_payload(self.config, geo_data, routes, summary, dns_data=dns_data)
 
     def send_report(self, payload: Dict[str, Any]) -> bool:
         return send_report(payload, self.config, max_retries=self.max_retries)

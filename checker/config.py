@@ -27,7 +27,7 @@ class _CustomArgumentParser(argparse.ArgumentParser):
         raise ConfigError(f"Argument parsing error: {message}")
 
 
-CHECKER_VERSION = "1.0.3"
+CHECKER_VERSION = "1.0.4"
 VERSION = CHECKER_VERSION
 
 

@@ -376,7 +376,24 @@ def poll_proxies(
         server_lower = str(server).strip().lower()
         if any(ex in name_lower or ex in server_lower for ex in excluded_set):
             continue
-        protocol = str(item.get("protocol", "unknown"))
+
+        raw_protocol = str(item.get("protocol") or item.get("type") or "unknown").strip().lower()
+        if raw_protocol in ("unknown", ""):
+            if "игровой" in name_lower or "hysteria" in name_lower or "hy2" in name_lower:
+                protocol = "hysteria2"
+            elif "vless" in name_lower:
+                protocol = "vless"
+            elif "shadowsocks" in name_lower or "ss" in name_lower:
+                protocol = "shadowsocks"
+            elif "trojan" in name_lower:
+                protocol = "trojan"
+            else:
+                protocol = "unknown"
+        elif raw_protocol in ("hysteria", "hy2"):
+            protocol = "hysteria2"
+        else:
+            protocol = raw_protocol
+
         online = bool(item.get("online", False))
 
         raw_lat = item.get("latencyMs")

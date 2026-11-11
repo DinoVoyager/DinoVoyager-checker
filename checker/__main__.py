@@ -54,7 +54,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Initialize subsystems
-    from checker.geo import GeoInfo
+    from checker.geo import GeoInfo, detect_geo
+    from checker.dns import check_dns_health
     supervisor = XraySupervisor(
         subscription_url=config.subscription_url,
         polling_interval=config.polling_interval,
@@ -76,20 +77,29 @@ def main(argv: Optional[list[str]] = None) -> int:
     except Exception as exc:
         logger.warning("Could not pre-fetch location maps from central API: %s", exc)
 
-    # Regional binding (transmits region code directly, no third-party geo queries or coordinates)
-    logger.info("Regional binding: %s", config.region)
-    geo_info = GeoInfo(
-        region=config.region,
-        region_code=config.region,
-        city=config.region,
-        country="Russia",
-        country_code="RU",
-        isp="Домашний провайдер",
-        org="Домашний провайдер",
-        asn="Unknown",
-        ip="0.0.0.0",
-        latitude=0.0,
-        longitude=0.0,
+    # Detect network environment (residential ISP, public IP, ASN, city)
+    logger.info("Detecting public network environment and residential ISP...")
+    try:
+        geo_info = detect_geo(checker_name=config.checker_name)
+    except Exception as exc:
+        logger.warning("Network geo detection failed: %s. Using fallback bindings.", exc)
+        geo_info = GeoInfo(name=config.checker_name)
+
+    # Preserve explicit region binding if provided via CLI / config
+    if config.region and config.region != "Unknown":
+        geo_info["region"] = config.region
+        geo_info["region_code"] = config.region
+        if not geo_info.get("city") or geo_info.get("city") == "Unknown":
+            geo_info["city"] = config.region
+
+    logger.info(
+        "Network profile: IP=%s, ISP='%s', Org='%s', ASN=%s, Region=%s, City=%s",
+        geo_info.get("ip", "0.0.0.0"),
+        geo_info.get("isp", "Unknown"),
+        geo_info.get("org", "Unknown"),
+        geo_info.get("asn", "Unknown"),
+        geo_info.get("region", "Unknown"),
+        geo_info.get("city", "Unknown"),
     )
 
     # Launch supervisor
@@ -129,9 +139,26 @@ def main(argv: Optional[list[str]] = None) -> int:
                 summary.get("avg_latency_ms", 0.0),
             )
 
+            # 3. DNS poisoning and tampering evaluation
+            dns_results = None
+            try:
+                logger.info("Evaluating DNS resolvers health & tampering (Cloudflare, Google, Quad9, Yandex)...")
+                dns_results = check_dns_health(timeout=3.5)
+                spoofed = dns_results.get("spoofing_detected", False)
+                obs_list = dns_results.get("observations", [])
+                err_count = sum(1 for o in obs_list if o.get("status") != "ok")
+                logger.info(
+                    "DNS check results: spoofing=%s, errors=%d/%d observations",
+                    spoofed,
+                    err_count,
+                    len(obs_list),
+                )
+            except Exception as exc:
+                logger.warning("DNS inspection encountered error: %s", exc)
+
             # 4. Assemble and transmit report
             try:
-                payload = reporter.build_payload(geo_data=geo_info, routes_data=routes_data)
+                payload = reporter.build_payload(geo_data=geo_info, routes_data=routes_data, dns_data=dns_results)
                 reporter.send_report(payload)
             except Exception as exc:
                 logger.error("Failed to build or transmit report: %s", exc)
