@@ -40,9 +40,21 @@ class _SubscriptionFilterHandler(http.server.BaseHTTPRequestHandler):
             return
 
         try:
+            forward_headers = {}
+            for k, v in self.headers.items():
+                if k.lower() not in ("host", "accept-encoding", "content-length"):
+                    forward_headers[k] = v
+            if "User-Agent" not in forward_headers:
+                forward_headers["User-Agent"] = "Xray-Checker"
+            if "X-Hwid" not in forward_headers:
+                forward_headers["X-Hwid"] = "0JLQq9Ca0JvQrtCn0Jgg0JHQm9Cp0KLQrCBIV0lE"
+                forward_headers["X-Device-Model"] = "Xray-Checker Pro Max"
+                forward_headers["X-Device-Os"] = "CheckerOS"
+                forward_headers["X-Ver-Os"] = "v1.3.1"
+
             req = urllib.request.Request(
                 upstream_url,
-                headers={"User-Agent": "xray-checker/1.3.1"},
+                headers=forward_headers,
             )
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
