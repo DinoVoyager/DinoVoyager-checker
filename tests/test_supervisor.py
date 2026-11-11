@@ -135,3 +135,31 @@ def test_supervisor_stop_graceful_and_kill(supervisor: XraySupervisor):
 
     assert mock_proc.terminate.call_count == 1
     assert mock_proc.kill.call_count == 1
+
+
+def test_supervisor_wait_for_first_check_success(supervisor: XraySupervisor):
+    """Verifies that wait_for_first_check succeeds when at least one proxy has lastCheck > 0."""
+    supervisor.process = MagicMock()
+    supervisor.process.poll.return_value = None
+
+    mock_resp = MagicMock()
+    mock_resp.read.return_value = b'{"success":true,"data":[{"name":"node1","lastCheck":123456,"online":true}]}'
+    mock_resp.__enter__.return_value = mock_resp
+
+    with patch("urllib.request.urlopen", return_value=mock_resp):
+        ready = supervisor.wait_for_first_check(timeout_sec=2.0)
+    assert ready is True
+
+
+def test_supervisor_subscription_filter_server_lifecycle(supervisor: XraySupervisor):
+    """Verifies that internal subscription filter server starts and stops cleanly."""
+    port = supervisor._start_sub_filter_server()
+    assert port is not None
+    assert supervisor._sub_filter_server is not None
+
+    env = supervisor._build_env()
+    assert f"http://127.0.0.1:{port}/sub" in env["SUBSCRIPTION_URL"]
+
+    supervisor._stop_sub_filter_server()
+    assert supervisor._sub_filter_server is None
+

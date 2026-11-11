@@ -97,6 +97,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         logger.info("Launching embedded xray-checker engine...")
         supervisor.start()
         supervisor.wait_until_ready(timeout_sec=30.0)
+        supervisor.wait_for_first_check(timeout_sec=float(config.proxy_timeout) + 15.0)
     except Exception as exc:
         logger.error("Failed to initialize xray-checker supervisor: %s", exc)
         supervisor.stop()

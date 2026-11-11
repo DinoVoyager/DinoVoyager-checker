@@ -6,20 +6,86 @@ readiness polling, crash auto-recovery, and graceful termination of xray-checker
 
 from __future__ import annotations
 
+import base64
+import http.server
 import logging
 import os
 from pathlib import Path
 import shutil
+import ssl
 import subprocess
 import sys
 import threading
 import time
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 import urllib.error
 import urllib.request
 
 logger = logging.getLogger("dinovoyager-checker.supervisor")
 proc_logger = logging.getLogger("xray-checker")
+
+
+class _SubscriptionFilterHandler(http.server.BaseHTTPRequestHandler):
+    """Local HTTP handler that fetches upstream subscription and filters out invalid/balancer routes."""
+
+    def log_message(self, format: str, *args: Any) -> None:
+        """Suppress standard HTTP request logging."""
+        pass
+
+    def do_GET(self) -> None:
+        upstream_url = getattr(self.server, "upstream_url", "")
+        if not upstream_url:
+            self.send_response(400)
+            self.end_headers()
+            return
+
+        try:
+            req = urllib.request.Request(
+                upstream_url,
+                headers={"User-Agent": "xray-checker/1.3.1"},
+            )
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+
+            with urllib.request.urlopen(req, timeout=15.0, context=ctx) as resp:
+                raw_data = resp.read()
+
+            try:
+                decoded = base64.b64decode(raw_data + b"==").decode("utf-8", errors="ignore")
+            except Exception:
+                decoded = raw_data.decode("utf-8", errors="ignore")
+
+            clean_lines = []
+            for line in decoded.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                # Exclude port 1234, balancer shadowsocks, or virtual auto-select configs
+                if (
+                    ":1234" in line
+                    or "Авто-выбор" in line
+                    or "авто-выбор" in line
+                    or "%D0%90%D0%B2%D1%82%D0%BE-%D0%B2%D1%8B%D0%B1%D0%BE%D1%80" in line
+                    or "%28%D0%90%D0%B2%D1%82%D0%BE-%D0%B2%D1%8B%D0%B1%D0%BE%D1%80" in line
+                ):
+                    continue
+                clean_lines.append(line)
+
+            if clean_lines:
+                filtered_body = base64.b64encode("\n".join(clean_lines).encode("utf-8"))
+            else:
+                filtered_body = raw_data
+
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(filtered_body)))
+            self.end_headers()
+            self.wfile.write(filtered_body)
+        except Exception as exc:
+            logger.warning("SubscriptionFilterServer upstream error: %s", exc)
+            self.send_response(502)
+            self.end_headers()
 
 
 class BinaryNotFoundError(FileNotFoundError):
@@ -61,6 +127,34 @@ class XraySupervisor:
         self._output_thread: Optional[threading.Thread] = None
         self._should_stop = False
         self._lock = threading.Lock()
+        self._sub_filter_server: Optional[http.server.HTTPServer] = None
+        self._sub_filter_port: Optional[int] = None
+
+    def _start_sub_filter_server(self) -> Optional[int]:
+        """Starts a background HTTP server on 127.0.0.1 serving filtered subscription."""
+        try:
+            server = http.server.HTTPServer(("127.0.0.1", 0), _SubscriptionFilterHandler)
+            server.upstream_url = self.subscription_url
+            port = int(server.server_port)
+            t = threading.Thread(target=server.serve_forever, daemon=True, name="sub-filter-proxy")
+            t.start()
+            self._sub_filter_server = server
+            self._sub_filter_port = port
+            logger.info("Started internal subscription filter proxy on 127.0.0.1:%d", port)
+            return port
+        except Exception as exc:
+            logger.warning("Could not start internal subscription filter proxy: %s", exc)
+            return None
+
+    def _stop_sub_filter_server(self) -> None:
+        if self._sub_filter_server is not None:
+            try:
+                self._sub_filter_server.shutdown()
+                self._sub_filter_server.server_close()
+            except Exception:
+                pass
+            self._sub_filter_server = None
+            self._sub_filter_port = None
 
     @staticmethod
     def _resolve_binary_path(explicit_path: Optional[str] = None) -> str:
@@ -102,8 +196,12 @@ class XraySupervisor:
     def _build_env(self) -> Dict[str, str]:
         """Builds isolated environment variables for child xray-checker process."""
         env = os.environ.copy()
+        effective_sub_url = self.subscription_url
+        if hasattr(self, "_sub_filter_port") and self._sub_filter_port:
+            effective_sub_url = f"http://{self.host}:{self._sub_filter_port}/sub"
+
         env.update({
-            "SUBSCRIPTION_URL": self.subscription_url,
+            "SUBSCRIPTION_URL": effective_sub_url,
             "SUBSCRIPTION_UPDATE": "true",
             "SUBSCRIPTION_UPDATE_INTERVAL": str(self.polling_interval),
             "PROXY_CHECK_INTERVAL": str(self.polling_interval),
@@ -147,6 +245,9 @@ class XraySupervisor:
                 return
 
             self._should_stop = False
+            if self._sub_filter_server is None:
+                self._start_sub_filter_server()
+
             logger.info("Starting xray-checker from %s on %s:%d", self.binary_path, self.host, self.port)
 
             env = self._build_env()
@@ -204,6 +305,34 @@ class XraySupervisor:
 
         raise TimeoutError(f"xray-checker failed to respond at {url} within {timeout_sec:.1f} seconds")
 
+    def wait_for_first_check(self, timeout_sec: float = 30.0, poll_interval: float = 1.0) -> bool:
+        """Waits until xray-checker has executed its initial proxy check iteration."""
+        deadline = time.monotonic() + timeout_sec
+        url = f"{self.base_url}/api/v1/proxies"
+        logger.info("Waiting for initial proxy checks to finish (timeout: %.1fs)...", timeout_sec)
+
+        while time.monotonic() < deadline:
+            if self.process is not None and self.process.poll() is not None:
+                return False
+
+            try:
+                import json
+                req = urllib.request.Request(url, headers={"User-Agent": "DinoVoyager-Supervisor/1.0"})
+                with urllib.request.urlopen(req, timeout=2.0) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    proxies = data.get("data", []) if isinstance(data, dict) else data
+                    if isinstance(proxies, list) and proxies:
+                        checked = [p for p in proxies if int(p.get("lastCheck", 0) or 0) > 0]
+                        if len(checked) > 0:
+                            logger.info("Initial proxy checks finished (%d/%d checked)", len(checked), len(proxies))
+                            return True
+            except Exception:
+                pass
+            time.sleep(poll_interval)
+
+        logger.warning("Initial proxy checks did not complete within %.1fs, continuing with current state", timeout_sec)
+        return False
+
     def is_healthy(self) -> bool:
         """Returns True if the child process is alive and /api/v1/status returns 200."""
         with self._lock:
@@ -243,6 +372,7 @@ class XraySupervisor:
 
     def stop(self, timeout_sec: float = 5.0) -> None:
         """Gracefully terminates the child process with SIGTERM, escalating to SIGKILL on timeout."""
+        self._stop_sub_filter_server()
         with self._lock:
             self._should_stop = True
             proc = self.process
